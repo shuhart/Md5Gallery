@@ -5,10 +5,10 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
-import android.util.Log
 import com.shuhart.md5gallery.media.Photo
 import com.shuhart.md5gallery.media.PhotosLoader
 import com.shuhart.md5gallery.utils.PrefUtils
+import com.shuhart.md5gallery.utils.log
 import io.reactivex.Observable
 import java.io.File
 import java.io.FileInputStream
@@ -63,7 +63,7 @@ class MediaInteractor {
         val thumbKey = "thumb://${photo.imageId}"
         val thumbPath = PrefUtils.getString(context, thumbKey, null)
         if (thumbPath != null) {
-            Log.d(javaClass.simpleName, "A thumbnail was found in a local cache.")
+            log("A thumbnail was found in a local cache.")
             photo.thumbPath = thumbPath
             return true
         }
@@ -85,7 +85,7 @@ class MediaInteractor {
                 MediaStore.Images.Thumbnails.MINI_KIND,
                 null)
         if (bitmap != null) {
-            Log.d(javaClass.simpleName, "Thumbnail was generated in the MiniThumbFile by the framework.")
+            log("Thumbnail was generated in the MiniThumbFile by the framework.")
             ensureThumbnailPathInMedia(context, photo, bytes)
         } else {
             ensureThumbnailPathInMedia(context, photo, bytes)
@@ -97,7 +97,7 @@ class MediaInteractor {
         if (photo.thumbPath.isEmpty()) {
             // Oh, crap.
             // Well, now we have to generate and store a thumbnail locally.
-            Log.d(javaClass.simpleName, "Thumbnail was not found in the device MiniThumbFile or in the local cache. Generating a one...")
+            log("Thumbnail was not found in the device MiniThumbFile or in the local cache. Generating a one...")
             generateAndStoreThumbnail(context, photo, bytes)
         }
     }
@@ -121,7 +121,7 @@ class MediaInteractor {
         options.inDither = false
         options.inPreferredConfig = Bitmap.Config.ARGB_8888
         val thumb = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
-        Log.d(javaClass.simpleName, "Manually generated thumbnail size: ${thumb.width} x ${thumb.height}")
+        log("Manually generated thumbnail size: ${thumb.width} x ${thumb.height}")
         val path = context.cacheDir.absolutePath + "/thumb_" + photo.imageId
         if (saveThumbnail(path, thumb)) {
             photo.thumbPath = Uri.fromFile(File(path)).toString()
@@ -137,7 +137,7 @@ class MediaInteractor {
             }
             return true
         } catch (e: Throwable) {
-            Log.e(javaClass.simpleName, "An exception occurred while saving a thumbnail to the local cache", e)
+            log("An exception occurred while saving a thumbnail to the local cache", e)
         }
         return false
     }
