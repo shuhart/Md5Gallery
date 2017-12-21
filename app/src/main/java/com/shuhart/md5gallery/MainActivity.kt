@@ -7,7 +7,6 @@ import android.support.v4.app.ActivityCompat
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.GridLayoutManager
 import android.support.v7.widget.RecyclerView
-import android.support.v7.widget.RecyclerView.SCROLL_STATE_IDLE
 import android.util.DisplayMetrics
 import android.util.Log
 import android.view.Surface
@@ -64,15 +63,6 @@ class MainActivity : AppCompatActivity() {
         } else {
             recyclerView.adapter = adapter
         }
-//        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-//            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-//                if (newState != SCROLL_STATE_IDLE) {
-//                    picasso.pauseTag(this)
-//                } else {
-//                    picasso.resumeTag(this)
-//                }
-//            }
-//        })
     }
 
     private fun getItemWidth(spanCount: Int): Int {
@@ -195,6 +185,11 @@ class MainActivity : AppCompatActivity() {
                 permissionView.visibility = View.GONE
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        disposable?.dispose()
     }
 
     private fun requestExternalStoragePermissions() {
