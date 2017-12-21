@@ -1,12 +1,12 @@
 package com.shuhart.md5gallery
 
-import com.shuhart.md5gallery.media.DeviceAlbums
+import com.shuhart.md5gallery.media.Photo
 
 class LoadDeviceAlbumsResult(val resultCode: LoadDeviceAlbumsResultCode,
-                             val deviceAlbums: DeviceAlbums = DeviceAlbums.EMPTY)
+                             val devicePhotos: List<Photo> = listOf())
 
 enum class LoadDeviceAlbumsResultCode {
     SUCCESS,
-    NO_ALBUMS,
+    NO_PHOTOS,
     NO_PERMISSION
 }

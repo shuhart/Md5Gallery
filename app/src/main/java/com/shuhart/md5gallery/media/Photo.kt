@@ -1,7 +1,6 @@
 package com.shuhart.md5gallery.media
 
-data class Photo(val bucketId: Int,
-                 val imageId: Long,
+data class Photo(val imageId: Long,
                  val dateTaken: Long,
                  val path: String,
                  val size: Long,
@@ -10,6 +9,6 @@ data class Photo(val bucketId: Int,
                  var thumbPath: String = "",
                  val isProviderPath: Boolean) {
     companion object {
-        val EMPTY = Photo(0, 0, 0, "", 0, 0, isProviderPath = false)
+        val EMPTY = Photo(0, 0, "", 0, 0, isProviderPath = false)
     }
 }

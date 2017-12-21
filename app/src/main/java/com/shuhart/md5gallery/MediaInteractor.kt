@@ -6,8 +6,8 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.provider.MediaStore
 import android.util.Log
-import com.shuhart.md5gallery.media.AlbumLoader
 import com.shuhart.md5gallery.media.Photo
+import com.shuhart.md5gallery.media.PhotosLoader
 import com.shuhart.md5gallery.utils.PrefUtils
 import io.reactivex.Observable
 import java.io.File
@@ -28,15 +28,15 @@ class MediaInteractor {
      */
     private val TARGET_SIZE_MINI_THUMBNAIL = 320
 
-    private val albumLoader = AlbumLoader()
+    private val photosLoader = PhotosLoader()
 
-    fun getDeviceAlbums(context: Context): Observable<LoadDeviceAlbumsResult> {
+    fun getDevicePhotos(context: Context): Observable<LoadDeviceAlbumsResult> {
         return Observable.defer {
-            val deviceAlbums = albumLoader.queryAlbums(context)
-            val code = if (deviceAlbums.albums.isEmpty())
-                LoadDeviceAlbumsResultCode.NO_ALBUMS else
+            val photos = photosLoader.queryPhotos(context)
+            val code = if (photos.isEmpty())
+                LoadDeviceAlbumsResultCode.NO_PHOTOS else
                 LoadDeviceAlbumsResultCode.SUCCESS
-            Observable.just(LoadDeviceAlbumsResult(resultCode = code, deviceAlbums = deviceAlbums))
+            Observable.just(LoadDeviceAlbumsResult(resultCode = code, devicePhotos = photos))
         }.onErrorResumeNext { _: Throwable ->
             Observable.just(LoadDeviceAlbumsResult(resultCode = LoadDeviceAlbumsResultCode.NO_PERMISSION))
         }
@@ -93,7 +93,7 @@ class MediaInteractor {
     }
 
     private fun ensureThumbnailPathInMedia(context: Context, photo: Photo, bytes: ByteArray) {
-        albumLoader.getThumbnail(context, photo)
+        photosLoader.getThumbnail(context, photo)
         if (photo.thumbPath.isEmpty()) {
             // Oh, crap.
             // Well, now we have to generate and store a thumbnail locally.

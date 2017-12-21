@@ -64,15 +64,15 @@ class MainActivity : AppCompatActivity() {
         } else {
             recyclerView.adapter = adapter
         }
-        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
-            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
-                if (newState != SCROLL_STATE_IDLE) {
-                    picasso.pauseTag(this)
-                } else {
-                    picasso.resumeTag(this)
-                }
-            }
-        })
+//        recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+//            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+//                if (newState != SCROLL_STATE_IDLE) {
+//                    picasso.pauseTag(this)
+//                } else {
+//                    picasso.resumeTag(this)
+//                }
+//            }
+//        })
     }
 
     private fun getItemWidth(spanCount: Int): Int {
@@ -93,21 +93,28 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadPhotos(savedInstanceState: Bundle? = null) {
         changeState(MainActivity.ViewState.PROGRESS)
-        disposable = interactor.getDeviceAlbums(this)
-                .subscribeOn(Schedulers.io())
+        val start = System.currentTimeMillis()
+        disposable = interactor.getDevicePhotos(this)
+                .subscribeOn(Schedulers.single())
                 .observeOn(AndroidSchedulers.mainThread())
-                .doOnNext {
-                    if (it.resultCode == LoadDeviceAlbumsResultCode.NO_ALBUMS) {
-                        changeState(MainActivity.ViewState.EMPTY)
-                    } else if (it.resultCode == LoadDeviceAlbumsResultCode.NO_PERMISSION) {
-                        requestExternalStoragePermissions()
+                .switchMap {
+                    when {
+                        it.resultCode == LoadDeviceAlbumsResultCode.NO_PHOTOS -> {
+                            changeState(MainActivity.ViewState.EMPTY)
+                            Observable.empty()
+                        }
+                        it.resultCode == LoadDeviceAlbumsResultCode.NO_PERMISSION -> {
+                            requestExternalStoragePermissions()
+                            Observable.empty()
+                        }
+                        else -> Observable.just(it)
                     }
                 }
-                .filter { it.deviceAlbums.albums.isNotEmpty() }
                 .doOnNext {
-                    horizontalProgressBar.max = it.deviceAlbums.allMediaAlbum.photos.size
+                    Log.d(javaClass.simpleName, "Fetched images from media store. Time = ${System.currentTimeMillis() - start} ms")
+                    horizontalProgressBar.max = it.devicePhotos.size
                 }
-                .flatMap { Observable.fromIterable(it.deviceAlbums.allMediaAlbum.photos) }
+                .flatMap { Observable.fromIterable(it.devicePhotos) }
                 .observeOn(Schedulers.io())
                 .flatMap { updateCache(it) }
                 .doOnError {

@@ -1,56 +1,50 @@
 package com.shuhart.md5gallery.media
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
 import android.provider.MediaStore
-import com.shuhart.md5gallery.utils.log
+import android.provider.MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI
 import com.shuhart.md5gallery.utils.using
 
 
-class AlbumLoader {
+class PhotosLoader {
     private val projectionPhotos = arrayOf(
             MediaStore.Images.Media._ID,
-            MediaStore.Images.Media.BUCKET_ID,
-            MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
             MediaStore.Images.Media.DATA,
             MediaStore.Images.Media.DATE_TAKEN,
             MediaStore.Images.Media.SIZE,
             MediaStore.Images.Media.ORIENTATION)
 
-    fun queryAlbums(context: Context): DeviceAlbums {
+    private val projectionThumbs = arrayOf(
+            MediaStore.Images.Thumbnails.IMAGE_ID,
+            MediaStore.Images.Thumbnails.DATA
+    )
+
+    @SuppressLint("Recycle")
+    fun queryPhotos(context: Context): List<Photo> {
         if (Build.VERSION.SDK_INT >= 23 &&
                 context.applicationContext.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
                         != PackageManager.PERMISSION_GRANTED) {
             throw SecurityException()
         }
 
-        val mediaAlbumsSorted = mutableListOf<Album>()
-        val mediaAlbums = mutableMapOf<Int, Album>()
-        var allMediaAlbum: Album? = null
-        var cameraFolder: String? = null
-        try {
-            cameraFolder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM).absolutePath + "/" + "Camera/"
-        } catch (e: Exception) {
-            log(e)
-        }
+        val photos = mutableListOf<Photo>()
+        val photoByIds = mutableMapOf<Long, Photo>()
 
-        var mediaCameraAlbumId = -1
-
-        val cursor = MediaStore.Images.Media.query(
+        val mediaCursor = MediaStore.Images.Media.query(
                 context.contentResolver,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                 projectionPhotos,
                 null,
                 null,
                 MediaStore.Images.Media.DATE_TAKEN + " DESC")
-        cursor.using {
+
+        mediaCursor.using {
             val imageIdColumn = getColumnIndex(MediaStore.Images.Media._ID)
-            val bucketIdColumn = getColumnIndex(MediaStore.Images.Media.BUCKET_ID)
-            val bucketNameColumn = getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME)
             val dataColumn = getColumnIndex(MediaStore.Images.Media.DATA)
             val dateColumn = getColumnIndex(MediaStore.Images.Media.DATE_TAKEN)
             val sizeColumn = getColumnIndex(MediaStore.Images.Media.SIZE)
@@ -58,8 +52,6 @@ class AlbumLoader {
 
             while (moveToNext()) {
                 val imageId = getLong(imageIdColumn)
-                val bucketId = getInt(bucketIdColumn)
-                val bucketName = getString(bucketNameColumn)
                 val path = getString(dataColumn)
                 val dateTaken = getLong(dateColumn)
                 val size = getLong(sizeColumn)
@@ -69,37 +61,32 @@ class AlbumLoader {
                     continue
                 }
 
-                val photo = Photo(bucketId, imageId, dateTaken, path, size, orientation, isProviderPath = Uri.parse(path).scheme != null)
-
-                getThumbnail(context, photo)
-
-                if (allMediaAlbum == null) {
-                    allMediaAlbum = Album(0, "All Media", photo).apply {
-                        mediaAlbumsSorted.add(0, this)
-                    }
-                }
-                allMediaAlbum?.addPhoto(photo)
-
-                var album = mediaAlbums[bucketId]
-                if (album == null) {
-                    album = Album(bucketId, bucketName, photo)
-                    mediaAlbums.put(bucketId, album)
-                    if (mediaCameraAlbumId == -1 && cameraFolder != null && path.startsWith(cameraFolder)) {
-                        mediaAlbumsSorted.add(0, album)
-                        mediaCameraAlbumId = bucketId
-                    } else {
-                        mediaAlbumsSorted.add(album)
-                    }
-                }
-                album.addPhoto(photo)
+                val photo = Photo(imageId, dateTaken, path, size, orientation, isProviderPath = Uri.parse(path).scheme != null)
+                photos.add(photo)
+                photoByIds.put(photo.imageId, photo)
             }
         }
 
-        allMediaAlbum?.let {
-            it.photos = it.photos.sortedBy { it.dateTaken }.toMutableList()
+        val thumbCursor = context.contentResolver.query(
+                EXTERNAL_CONTENT_URI,
+                projectionThumbs,
+                "KIND = ${MediaStore.Images.Thumbnails.MINI_KIND}",
+                null,
+                null)
+
+        thumbCursor.using {
+            val imageIdColumn = getColumnIndex(MediaStore.Images.Thumbnails.IMAGE_ID)
+            val dataColumn = getColumnIndex(MediaStore.Images.Thumbnails.DATA)
+
+            while (moveToNext()) {
+                val imageId = getLong(imageIdColumn)
+                val path = getString(dataColumn)
+                val photo = photoByIds[imageId] ?: continue
+                photo.thumbPath = path
+            }
         }
 
-        return DeviceAlbums(mediaAlbumsSorted, allMediaAlbum ?: Album.EMPTY, mediaCameraAlbumId)
+        return photos
     }
 
     fun getThumbnail(context: Context, photo: Photo) {

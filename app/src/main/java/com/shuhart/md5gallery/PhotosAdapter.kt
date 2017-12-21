@@ -47,10 +47,11 @@ class PhotosAdapter(
         val sizeTextView: TextView = itemView.findViewById(R.id.size)
 
         fun bind(photo: Photo) {
+            picasso.cancelTag(this)
             if (photo.isProviderPath) {
-                picasso.load(photo.thumbPath).tag(imageView.context).into(imageView)
+                picasso.load(photo.thumbPath).tag(this).into(imageView)
             } else {
-                picasso.load(File(photo.thumbPath)).tag(imageView.context).into(imageView)
+                picasso.load(File(photo.thumbPath)).tag(this).into(imageView)
             }
             sizeTextView.text = Formatter.formatShortFileSize(imageView.context, photo.size)
             nameTextView.text = Uri.parse(photo.path).lastPathSegment
